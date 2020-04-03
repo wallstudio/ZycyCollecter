@@ -1,0 +1,48 @@
+﻿<UserControl x:Class="ZycyCollecter.PageItem"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:ZycyCollecter"
+             xmlns:prop="clr-namespace:ZycyCollecter.Properties"
+             d:DataContext="{d:DesignInstance local:MockData, IsDesignTimeCreatable=True}"
+             mc:Ignorable="d" Width="{Binding Width, FallbackValue=150}">
+
+    <UserControl.DataContext>
+        <local:MockData />
+    </UserControl.DataContext>
+    
+    <Border BorderBrush="Black" BorderThickness="1">
+        <StackPanel Margin="10">
+            <Grid>
+                <Image Source="{Binding img}" />
+                <TextBlock Text="10" FontSize="30" />
+            </Grid>
+            <Separator Height="10"></Separator>
+            <TextBlock >Lum</TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <Button>-2</Button>
+                <Button>-1</Button>
+                <Button>±0</Button>
+                <Button>+1</Button>
+                <Button>+2</Button>
+            </StackPanel>
+            <TextBlock >Lum</TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <Button>-2</Button>
+                <Button>-1</Button>
+                <Button>±0</Button>
+                <Button>+1</Button>
+                <Button>+2</Button>
+            </StackPanel>
+            <TextBlock >Lum</TextBlock>
+            <StackPanel Orientation="Horizontal">
+                <Button>-2</Button>
+                <Button>-1</Button>
+                <Button>±0</Button>
+                <Button>+1</Button>
+                <Button>+2</Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</UserControl>
