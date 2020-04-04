@@ -92,7 +92,7 @@ namespace ZycyCollecter.ViewModel
         }
     }
 
-    static class Utility
+    public static class Utility
     {
         public static readonly ImageSource fallBackImage = CreateImageSource(Properties.Resources.fallback_image_icon);
 
