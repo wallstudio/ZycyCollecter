@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -28,13 +30,5 @@ namespace ZycyCollecter
         {
             InitializeComponent(); 
         }
-    }
-
-    public class MockData
-    {
-        public ImageSource img { get; } = Imaging.CreateBitmapSourceFromHBitmap(
-            Properties.Resources.fallback_image_icon.GetHbitmap(),
-            IntPtr.Zero, Int32Rect.Empty,
-            BitmapSizeOptions.FromEmptyOptions());
     }
 }

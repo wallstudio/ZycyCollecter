@@ -4,16 +4,28 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ZycyCollecter"
+        xmlns:mocks="clr-namespace:ZycyCollecter.ViewModel.Mocks"
         mc:Ignorable="d"
-        Title="MainWindow" Height="720" Width="1024">
+        Title="MainWindow" Height="776" Width="800"
+        d:DataContext="{d:DesignInstance mocks:WindowMock, IsDesignTimeCreatable=True}">
 
-    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Orientation="Vertical">
-            <local:BookItem Margin="5" />
-            <local:BookItem Margin="5" />
-            <local:BookItem Margin="5" />
-            <local:BookItem Margin="5" />
-        </StackPanel>
-    </ScrollViewer>
-
+    <Grid>
+        <ListBox
+                ItemsSource="{Binding Books}"
+                ScrollViewer.VerticalScrollBarVisibility="Visible"
+                ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+                ScrollViewer.CanContentScroll="False" >
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <local:BookItem />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <StackPanel Orientation="Vertical"
+                            Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType=ListBox}}"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+        </ListBox>
+    </Grid>
 </Window>

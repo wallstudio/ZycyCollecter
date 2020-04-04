@@ -33,7 +33,7 @@ namespace ZycyCollecter
                 }
 
                 return renderListener.Buffer
-                    .Select(info => (info.GetDrawingImage(), info.GetFileType()));
+                    .Select(info => (info.GetDrawingImage(), info.GetFileType())).ToArray();
             }
         }
 

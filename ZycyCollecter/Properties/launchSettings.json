@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "ZycyCollecter": {
+      "commandName": "Project",
+      "nativeDebugging": false
+    }
+  }
+}

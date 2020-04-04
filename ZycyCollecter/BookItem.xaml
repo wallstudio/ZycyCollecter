@@ -4,68 +4,39 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:ZycyCollecter"
-             mc:Ignorable="d" 
-             d:DesignHeight="300" d:DesignWidth="1000">
-    <Grid>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="Auto" />
-            <ColumnDefinition />
-        </Grid.ColumnDefinitions>
-        <WrapPanel Grid.Column="0" Background="LightGray">
-            <StackPanel Margin="5">
-                <Image Width="100" Height="100" />
-                <TextBlock Text="2/30" />
-            </StackPanel>
-        </WrapPanel>
-        <ScrollViewer
-            Grid.Column="1"
-            HorizontalScrollBarVisibility="Auto"
-            VerticalScrollBarVisibility="Disabled">
-            <StackPanel Orientation="Horizontal" >
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-                <local:PageItem Margin="5" />
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+             xmlns:mocks="clr-namespace:ZycyCollecter.ViewModel.Mocks"
+             mc:Ignorable="d" d:DesignHeight="300" d:DesignWidth="1000"
+             d:DataContext="{d:DesignInstance mocks:BookMock, IsDesignTimeCreatable=True}">
+
+    <StackPanel>
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition />
+            </Grid.ColumnDefinitions>
+            <WrapPanel Grid.Column="0" Background="LightGray">
+                <StackPanel Margin="5">
+                    <Image Width="100" Height="100" />
+                    <TextBlock Text="{Binding PageCount}" />
+                </StackPanel>
+            </WrapPanel>
+            <ListBox
+                ItemsSource="{Binding Pages}"
+                Grid.Column="1"
+                SelectionMode="Extended"
+                ScrollViewer.CanContentScroll="False" >
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <local:PageItem Margin="5" DataContext="{Binding}" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Orientation="Horizontal" />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+            </ListBox>
+        
+        </Grid>
+    </StackPanel>
 </UserControl>
