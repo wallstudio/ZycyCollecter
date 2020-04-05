@@ -29,6 +29,7 @@ using Point = OpenCvSharp.Point;
 using Rect = OpenCvSharp.Rect;
 using Window = System.Windows.Window;
 using ZycyCollecter.Utility;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace ImageProcessingTest
 {
@@ -44,7 +45,9 @@ namespace ImageProcessingTest
 
         bool isLoading = false;
         object loadingLock = new object();
+        string pdf;
 
+        Func<Task<Bitmap>> proc => DetectRect;
 
         public MainWindow()
         {
@@ -77,7 +80,15 @@ namespace ImageProcessingTest
             }
             dests.Clear();
 
-            var bitmap = await ORCTraverser(); // destsに詰める
+            Bitmap bitmap = null;
+            try
+            {
+                bitmap = await proc(); // destsに詰める
+            }
+            catch(Exception e)
+            {
+                displayText.Text += $"\n\n{e}";
+            }
 
             imageType.Items.Clear();
             foreach (var k in dests.Keys.Reverse())
@@ -306,70 +317,92 @@ namespace ImageProcessingTest
             StringBuilder log = new StringBuilder();
 
             Bitmap bitmap = await GetBitmap();
-            await Task.Run(() =>
+            try
             {
-                Mat mat = bitmap.ToMat();
-
-                // 下ごしらえ
-                var resize = RegistDest("resize", mat.Resize(new OpenCvSharp.Size(480, 480f / mat.Width * mat.Height)));
-                var gray = RegistDest("gray", resize.CvtColor(ColorConversionCodes.RGBA2GRAY));
-                var negative = RegistDest("negative", ~gray);
-                var binary = RegistDest("binary", negative.Threshold(230, 255, ThresholdTypes.Binary));
-                var open = RegistDest("open", binary.MorphologyEx(MorphTypes.Open, new Mat(), iterations: 2));
-                var close = RegistDest("close", open.MorphologyEx(MorphTypes.Close, new Mat(), iterations: 2));
-                var blured = RegistDest("blured", close.GaussianBlur(new OpenCvSharp.Size(33, 33), 10, 10));
-                var binary2 = RegistDest("binary2", blured.Threshold(blured.GetMedium(), 255, ThresholdTypes.Binary));
-                var sobel = RegistDest("sobel", binary2.Laplacian(MatType.CV_8U, ksize: 5));
-                var dilate = RegistDest("dilate", binary2.Dilate(new Mat(), iterations: 5));
-
-                var touches = dilate.GetTouchWallEdges().ToArray();
-                log.AppendLine($"touch: {touches.Length}");
-
-                var linesSet = sobel.SearchHouhLines(4 - touches.Length);
-
-                // 重複と斜めを消して評価
-                var filted = linesSet
-                    .Select(ls => ls.DistinctSimmiler(sobel.Width / 3, 20).IgnoreDiagonally(10))
-                    .ToArray();
-                var goodLines = filted.FirstOrDefault(ls => ls.Count >= 4 - touches.Length);
-                var okLiness = filted.OrderBy(ls => ls.Count).FirstOrDefault(ls => ls.Count > 4 - touches.Length);
-                var badLines = filted.First();
-                var lines = goodLines ?? okLiness ?? badLines;
-                var fixedLines = lines
-                    .Select(CvUtility.To2Point)
-                    .Concat(touches.Select(r => ((double)r.Left, (double)r.Top, (double)r.Right, (double)r.Bottom)));
-                log.AppendLine($"{nameof(goodLines)}: {goodLines?.Count}");
-                log.AppendLine($"{nameof(okLiness)}: {okLiness?.Count}");
-                log.AppendLine($"{nameof(badLines)}: {badLines?.Count}");
-                log.AppendLine($"{nameof(fixedLines)}:\n     {fixedLines.ToStringJoin("\n    ")}");
-                
-                Mat lined = null;
+                await Task.Run(() =>
                 {
-                    lined = resize.CvtColor(ColorConversionCodes.RGBA2RGB);
-                    foreach ((double x1, double y1, double x2, double y2) in fixedLines)
+                    Mat mat = bitmap.ToMat();
+                    log.AppendLine($"RawSize: {mat.Width}x{mat.Height}");
+
+                    // 下ごしらえ
+                    var resize = RegistDest("resize", mat.Resize(new OpenCvSharp.Size(480, 480f / mat.Width * mat.Height)));
+                    var gray = RegistDest("gray", resize.CvtColor(ColorConversionCodes.RGBA2GRAY));
+                    var negative = RegistDest("negative", ~gray);
+                    var binary = RegistDest("binary", negative.Threshold(230, 255, ThresholdTypes.Binary));
+                    var open = RegistDest("open", binary.MorphologyEx(MorphTypes.Open, new Mat(), iterations: 2));
+                    var close = RegistDest("close", open.MorphologyEx(MorphTypes.Close, new Mat(), iterations: 2));
+                    var blured = RegistDest("blured", close.GaussianBlur(new OpenCvSharp.Size(33, 33), 10, 10));
+                    var binary2 = RegistDest("binary2", blured.Threshold(blured.GetMedium(), 255, ThresholdTypes.Binary));
+                    var sobel = RegistDest("sobel", binary2.Laplacian(MatType.CV_8U, ksize: 5));
+                    var dilate = RegistDest("dilate", binary2.Dilate(new Mat(), iterations: 5));
+
+                    var touches = dilate.GetTouchWallEdges().ToArray();
+                    log.AppendLine($"touch: {touches.Length}");
+
+                    var linesSet = sobel.SearchHouhLines(4 - touches.Length);
+
+                    // 重複と斜めを消して評価
+                    var filted = linesSet
+                        .Select(ls => ls.DistinctSimmiler(sobel.Width / 3, 20).IgnoreDiagonally(10))
+                        .ToArray();
+                    var goodLines = filted.FirstOrDefault(ls => ls.Count >= 4 - touches.Length);
+                    var okLiness = filted.OrderBy(ls => ls.Count).FirstOrDefault(ls => ls.Count > 4 - touches.Length);
+                    var badLines = filted.OrderByDescending(ls => ls.Count).First();
+                    var lines = goodLines ?? okLiness ?? badLines;
+                    var fixedLines = lines
+                        .Select(CvUtility.To2Point)
+                        .Concat(touches.Select(r => ((double)r.Left, (double)r.Top, (double)r.Right, (double)r.Bottom)));
+                    log.AppendLine($"{nameof(goodLines)}: {goodLines?.Count}");
+                    log.AppendLine($"{nameof(okLiness)}: {okLiness?.Count}");
+                    log.AppendLine($"{nameof(badLines)}: {badLines?.Count}");
+                    log.AppendLine($"{nameof(fixedLines)}:\n     {fixedLines.ToStringJoin("\n    ")}");
+
+                    Mat lined = null;
                     {
-                        lined.Line((int)x1, (int)y1, (int)x2, (int)y2, Scalar.Green);
+                        lined = resize.CvtColor(ColorConversionCodes.RGBA2RGB);
+                        foreach ((double x1, double y1, double x2, double y2) in fixedLines)
+                        {
+                            lined.Line((int)x1, (int)y1, (int)x2, (int)y2, Scalar.Green);
+                        }
                     }
-                }
 
-                // 単純組み合わせを列挙して交点を求めコーナーを検出
-                var linesCombi = fixedLines.GetCombination();
-                var crosses = linesCombi.GetCross().Select(CvUtility.To2f).ToArray();
-                log.AppendLine($"Crosses:\n    {crosses.ToStringJoin("\n    ")}");
+                    // 単純組み合わせを列挙して交点を求めコーナーを検出
+                    var linesCombi = fixedLines.GetCombination();
+                    var crosses = linesCombi.GetCross().Select(CvUtility.To2f).ToArray();
+                    var corners = CvUtility.Filter4Corner(crosses, resize.Size());
+                    log.AppendLine($"Crosses:\n    {crosses.ToStringJoin("\n    ")}");
+                    log.AppendLine($"Corners:\n    {corners.ToStringJoin("\n    ")}");
 
-                {
-                    foreach (var p in crosses)
                     {
-                        lined.Circle(new Point(p.X, p.Y), 5, Scalar.Aqua);
+                        foreach (var p in corners)
+                        {
+                            lined.Circle(new Point(p.X, p.Y), 5, Scalar.Aqua);
+                        }
+                        RegistDest("lined", lined);
                     }
-                    RegistDest("lined", lined);
-                }
 
-                Mat parspective = mat.TrimAndFitBy4Cross(resize, crosses);
-                RegistDest("parspective", parspective);
-            });
+                    var unscaledRectPoints = corners.Select(p => p * (mat.Width / (float)resize.Width)).ToArray();
+                    log.AppendLine($"UnscaledCrosses:\n    {unscaledRectPoints.ToStringJoin("\n    ")}");
 
-            displayText.Text = log.ToString();
+                    {
+                        var unscaledLined = mat.CvtColor(ColorConversionCodes.RGBA2RGB);
+                        foreach (var p in unscaledRectPoints)
+                        {
+                            unscaledLined.Circle(new Point(p.X, p.Y), 10, Scalar.Aqua, thickness: 20);
+                        }
+                        RegistDest("unscaledLined", unscaledLined);
+                    }
+
+
+                    Mat parspective = mat.TrimAndFitBy4Cross(unscaledRectPoints);
+                    RegistDest("parspective", parspective);
+                });
+            }
+            finally
+            {
+                displayText.Text = log.ToString();
+            }
+
             return null;
         }
 
@@ -382,7 +415,20 @@ namespace ImageProcessingTest
 
         async Task<Bitmap> GetBitmap()
         {
-            var image = await Task.Run(() => PDFUtility.GetImages(@"C:\Users\huser\Desktop\book\hoge0081.PDF"));
+            while(string.IsNullOrEmpty(pdf))
+            {
+                var dialog = new CommonOpenFileDialog();
+                var filter = new CommonFileDialogFilter("PDF", "pdf");
+                dialog.Filters.Add(filter);
+                if(dialog.ShowDialog() != CommonFileDialogResult.Ok)
+                {
+                    Application.Current.Shutdown();
+                    return null;
+                }
+                pdf = dialog.FileName;
+            }
+
+            var image = await Task.Run(() => PDFUtility.GetImages(pdf));
             pageIndex.Maximum = image.Count() - 1;
             var index = (int)pageIndex.Value;
             var bitmap = await Task.Run(() => new Bitmap(image.ToArray()[index].image));

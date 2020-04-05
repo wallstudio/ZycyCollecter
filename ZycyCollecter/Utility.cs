@@ -21,6 +21,7 @@ using ZycyCollecter.Tesseract;
 using Rect = OpenCvSharp.Rect;
 using Path = System.IO.Path;
 using System.Windows.Input;
+using Size = OpenCvSharp.Size;
 
 namespace ZycyCollecter.Utility
 {
@@ -188,7 +189,7 @@ namespace ZycyCollecter.Utility
             {
                 var center = (min + max) / 2;
                 // 距離分解能,角度分解能,閾値,線分の最小長さ,2点が同一線分上にあると見なす場合に許容される最大距離
-                IList<LineSegmentPolar> _lines = src.HoughLines(1, Math.PI / 360, center, 0, 0);
+                IList<LineSegmentPolar> _lines = src.HoughLines(1, Math.PI / 360, center, 0, 5);
                 linesSet.Add(_lines);
                 Debug.WriteLine($"{counter} {min}-{center}-{max} {_lines.Count}({_lines.Count})");
                 if (_lines.Count == detectEdgeCount)
@@ -221,19 +222,19 @@ namespace ZycyCollecter.Utility
             return (x1, y1, x2, y2);
         }
 
-        public static Mat TrimAndFitBy4Cross(this Mat mat, Mat resize, Point2f[] crosses)
+        public static Mat TrimAndFitBy4Cross(this Mat mat, Point2f[] crosses)
         {
+            // 左上始点の時計回りに双方を合わせる
             var srcRectSum = crosses.Sum((c0, c1) => c0 + c1);
             (double x, double y) = (srcRectSum.X / crosses.Length, srcRectSum.Y / crosses.Length);
             var srcRectPoints = new Point2f[]
             {
-                    crosses.First(c => c.X < x && c.Y < y) * (mat.Width / resize.Width),
-                    crosses.First(c => c.X > x && c.Y < y) * (mat.Width / resize.Width),
-                    crosses.First(c => c.X > x && c.Y > y) * (mat.Width / resize.Width),
-                    crosses.First(c => c.X < x && c.Y > y) * (mat.Width / resize.Width),
+                crosses.First(c => c.X < x && c.Y < y), crosses.First(c => c.X > x && c.Y < y),
+                crosses.First(c => c.X > x && c.Y > y), crosses.First(c => c.X < x && c.Y > y),
             };
             var dstRectPoints = new Point2f[]
                 { new Point2f(0, 0), new Point2f(mat.Width, 0), new Point2f(mat.Width, mat.Height), new Point2f(0, mat.Height), };
+            
             var matrix = Cv2.GetPerspectiveTransform(srcRectPoints, dstRectPoints);
             var parspective = mat.Clone();
             Cv2.WarpPerspective(mat, parspective, matrix, parspective.Size());
@@ -269,9 +270,20 @@ namespace ZycyCollecter.Utility
         public static bool IsPainted(this Mat mat)
         {
             var (min, max) = mat.GetMinMax();
-            return min == max;
+            return min != max;
         }
 
+        public static IEnumerable<Point2f> Filter4Corner(IEnumerable<Point2f> crosses, Size size)
+        {
+            var regulered = crosses
+                .Where(c => c.X > 0 && c.X <= size.Width && c.Y > 0 && c.Y <= size.Height)
+                .Select(c => new Point2d(c.X / size.Width, c.Y / size.Height)).ToList();
+            var center = new Point2d(
+                x: (regulered.Select(p => p.X).Max() + regulered.Select(p => p.X).Min()) / 2,
+                y: (regulered.Select(p => p.Y).Max() + regulered.Select(p => p.Y).Min()) / 2);
+            var mostFar4 = regulered.OrderByDescending(p => Math.Abs(p.X - center.X) + Math.Abs(p.Y - center.Y)).Take(4);
+            return mostFar4.Select(c => new Point2f((float)(c.X * size.Width), (float)(c.Y * size.Height)));
+        }
     }
 
 
