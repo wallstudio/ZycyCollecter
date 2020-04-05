@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -7,7 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows.Media;
-using ZycyCollecter.Utility;
+using ZycyUtility;
 using Microsoft.WindowsAPICodePack.Dialogs;
 using System.Windows;
 using System.Collections.Generic;
@@ -18,6 +18,7 @@ using System.Text;
 using System;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
+using System.Collections;
 
 namespace ZycyCollecter.ViewModel
 {
@@ -58,7 +59,7 @@ namespace ZycyCollecter.ViewModel
             }
         }
 
-        public bool? IsRotate180 { get; private set; }
+        public bool? IsRotate180 { get; private set; } = null;
 
         public GeneralCommand TestCommand { get; } = new GeneralCommand();
 
@@ -185,7 +186,7 @@ namespace ZycyCollecter.ViewModel
                 await Task.Delay(1000);
             }
 
-            if (isRotate180)
+            if ((IsRotate180 == null && isRotate180) || ((bool)IsRotate180 ^ isRotate180))
             {
                 correctedPageBitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
                 PageImage = correctedPageBitmap.ToImageSource();
@@ -245,6 +246,22 @@ namespace ZycyCollecter.ViewModel
                     await task;
                 }
             }
+
+            var rotations = Pages.Select(p => p.IsRotate180);
+            var rotationsWithoutCover = rotations.Skip(1).SkipLast(1).ToArray();
+            var oddPattern = Enumerable.Range(0, rotationsWithoutCover.Count()).Select(i => i % 2 == 1);
+            var evenPattern = Enumerable.Range(0, rotationsWithoutCover.Count()).Select(i => i % 2 == 0);
+            var oddDistance = rotationsWithoutCover.Zip(oddPattern).Where(z => z.First != null && z.First != z.Second);
+            var evenDistance = rotationsWithoutCover.Zip(evenPattern).Where(z => z.First != null && z.First != z.Second);
+            var isOddOrientation = oddDistance.Count() < evenDistance.Count();
+
+            var zip = Pages.Skip(1).SkipLast(1).Zip(isOddOrientation ? oddPattern : evenPattern);
+            foreach (var (page, orientation) in zip)
+            {
+                _ = page.Rotate180(orientation);
+            }
+
+            Debug.WriteLine($"{Path.GetFileName(pdfFilePath)}（{PageCount}）が{(isOddOrientation ? "Odd" : "Even")}で終了");
         }
     }
 

@@ -9,6 +9,9 @@
              d:DataContext="{d:DesignInstance mocks:PageMock, IsDesignTimeCreatable=True}">
 
     <Border BorderBrush="Black" BorderThickness="1" Background="{Binding Background}">
+        <Border.InputBindings>
+            <MouseBinding Command="{Binding TestCommand}" MouseAction="RightClick" />
+        </Border.InputBindings>
         <StackPanel Margin="10">
             <Grid>
                 <Image Source="{Binding PageImage}" />

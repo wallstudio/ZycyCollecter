@@ -5,6 +5,7 @@
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWPF>true</UseWPF>
     <Platforms>AnyCPU;x64</Platforms>
+    <StartupObject>ImageProcessingTest.App</StartupObject>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -24,7 +25,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\ZycyCollecter\ZycyCollecter.csproj" />
+    <ProjectReference Include="..\ZycyUtility\ZycyUtility.csproj" />
   </ItemGroup>
 
 </Project>

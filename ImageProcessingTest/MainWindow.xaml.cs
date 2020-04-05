@@ -1,4 +1,4 @@
-﻿using OpenCvSharp;
+using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
@@ -24,12 +24,11 @@ using System.Windows.Shapes;
 using Tesseract;
 using ZycyCollecter;
 using ZycyCollecter.Tesseract;
-using ZycyCollecter.ViewModel;
 using Point = OpenCvSharp.Point;
 using Rect = OpenCvSharp.Rect;
 using Window = System.Windows.Window;
-using ZycyCollecter.Utility;
 using Microsoft.WindowsAPICodePack.Dialogs;
+using ZycyUtility;
 
 namespace ImageProcessingTest
 {

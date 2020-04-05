@@ -2,7 +2,6 @@
 using iTextSharp.text.pdf.parser;
 using OpenCvSharp;
 using System;
-using System.IO;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -12,24 +11,25 @@ using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Interop;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using Tesseract;
-using ZycyCollecter.Tesseract;
 using Rect = OpenCvSharp.Rect;
 using Path = System.IO.Path;
 using System.Windows.Input;
 using Size = OpenCvSharp.Size;
+using ZycyCollecter.Tesseract;
+using ZycyUtility.Properties;
+using System.Windows.Media;
+using System.Windows.Interop;
+using System.Windows;
+using System.Windows.Media.Imaging;
 
-namespace ZycyCollecter.Utility
+namespace ZycyUtility
 {
 
     public static class WPFUtility
     {
 
-        public static readonly ImageSource fallBackImage = Properties.Resources.fallback_image_icon.ToImageSource();
+        public static readonly ImageSource fallBackImage = Resources.fallback_image_icon.ToImageSource();
 
         public static async Task<ImageSource> ToImageSourceAsync(this Image source)
         {
@@ -285,8 +285,8 @@ namespace ZycyCollecter.Utility
         public static IEnumerable<Point2f> Filter4Corner(IEnumerable<Point2f> crosses, Size size)
         {
             var regulered = crosses
-                .Where(c => c.X > 0 && c.X <= size.Width && c.Y > 0 && c.Y <= size.Height)
-                .Select(c => new Point2d(c.X / size.Width, c.Y / size.Height)).ToList();
+                .Select(c => new Point2d(c.X / size.Width, c.Y / size.Height)).ToList()
+                .Where(c => c.X >= -0.1 && c.X <= 1.1 && c.Y >= -0.1 && c.Y <= 1.1);
             var center = new Point2d(
                 x: (regulered.Select(p => p.X).Max() + regulered.Select(p => p.X).Min()) / 2,
                 y: (regulered.Select(p => p.Y).Max() + regulered.Select(p => p.Y).Min()) / 2);
