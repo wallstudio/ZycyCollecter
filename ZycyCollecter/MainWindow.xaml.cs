@@ -32,11 +32,11 @@ namespace ZycyCollecter
 
             Loaded += (s, e) =>
             {
-                //DataContext = new WindowMock(5);
-
                 const string directory = @"C:\Users\huser\Desktop\book";
                 var viewModel = new WindwoViewModel(directory);
                 DataContext = viewModel;
+
+                _ = viewModel.LoadResourceAsync();
             };
         }
     }

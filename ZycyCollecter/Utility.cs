@@ -20,13 +20,14 @@ using Tesseract;
 using ZycyCollecter.Tesseract;
 using Rect = OpenCvSharp.Rect;
 using Path = System.IO.Path;
+using System.Windows.Input;
 
 namespace ZycyCollecter.Utility
 {
 
     public static class WPFUtility
     {
-        
+
         public static readonly ImageSource fallBackImage = Properties.Resources.fallback_image_icon.ToImageSource();
 
         public static async Task<ImageSource> ToImageSourceAsync(this Image source)
@@ -361,6 +362,17 @@ namespace ZycyCollecter.Utility
             }
             return sb.ToString();
         }
+    }
+
+    public class GeneralCommand : ICommand
+    {
+        public event EventHandler CanExecuteChanged;
+
+        public event Action OnExecuted;
+
+        public bool CanExecute(object parameter) => OnExecuted != null;
+
+        public void Execute(object parameter) => OnExecuted();
     }
 
 }

@@ -17,7 +17,7 @@
             <Separator Height="10"></Separator>
             <TextBlock Text="Lum" />
             <StackPanel Orientation="Horizontal">
-                <Button>-2</Button>
+                <Button Command="{Binding TestCommand}">-2</Button>
                 <Button>-1</Button>
                 <Button>±0</Button>
                 <Button>+1</Button>
