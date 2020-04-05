@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
@@ -67,12 +67,12 @@ namespace ZycyCollecter.ViewModel
         Bitmap correctedPageBitmap;
         readonly string imageType;
 
-        public PageViewModel(int pageIndex, Image pageImageResource, string imageType)
+        public PageViewModel(int pageIndex, Image pageImageResource, string imageType, string pdf)
         {
             PageIndex = pageIndex;
             this.pageImageResource = pageImageResource;
             this.imageType = imageType;
-            TestCommand.OnExecuted += () => _ = Rotate180(true);
+            TestCommand.OnExecuted += () => new ImageProcessingTest.MainWindow(pdf, pageIndex - 1).Show();
         }
 
         public override async Task LoadResourceAsync()
@@ -232,7 +232,7 @@ namespace ZycyCollecter.ViewModel
             for (int i = 0; i < images.Length; i++)
             {
                 var (image, type) = images[i];
-                var pageVM = new PageViewModel(i + 1, image, type);
+                var pageVM = new PageViewModel(i + 1, image, type, pdfFilePath);
                 Pages.Add(pageVM);
                 pages.Add(pageVM);
             }

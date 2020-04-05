@@ -1,4 +1,4 @@
-using OpenCvSharp;
+﻿using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System;
 using System.Collections.Generic;
@@ -47,6 +47,14 @@ namespace ImageProcessingTest
         string pdf;
 
         Func<Task<Bitmap>> proc => DetectRect;
+
+        public MainWindow(string pdf, int index) : this()
+        {
+            this.pdf = pdf;
+            pageIndex.Minimum = 0;
+            pageIndex.Maximum = PDFUtility.GetImages(pdf).Count() - 1;
+            pageIndex.Value = index;
+        }
 
         public MainWindow()
         {
