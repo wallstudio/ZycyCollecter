@@ -20,6 +20,7 @@ using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 using System.Collections;
 using System.Windows.Media.Imaging;
+using System.Windows.Threading;
 
 namespace ZycyCollecter.ViewModel
 {
@@ -75,7 +76,7 @@ namespace ZycyCollecter.ViewModel
             this.pageImageResource = pageImageResource;
             this.imageType = imageType;
             OpenDebugCommand.OnExecuted += () => new ImageProcessingTest.MainWindow(pdf, pageIndex - 1).Show();
-            TestCommand.OnExecuted += () => _ = Save(@"C:\Users\huser\Desktop", "pdf");
+            TestCommand.OnExecuted += () => _ = SaveAsync(@"C:\Users\huser\Desktop", "pdf");
         }
 
         public override async Task LoadResourceAsync()
@@ -206,10 +207,14 @@ namespace ZycyCollecter.ViewModel
             }
         }
 
-        public async Task Save(string directory, string prefix)
+        public async Task SaveAsync(string directory, string prefix)
         {
             var filename = $"{prefix}{PageIndex}.{imageType}";
             var path = Path.Combine(directory, filename);
+            if(!Directory.Exists(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
             await (PageImage as BitmapSource).SaveAsync(path);
         }
 
@@ -294,32 +299,65 @@ namespace ZycyCollecter.ViewModel
 
             this.isOddOrientation = isOddOrientation;
         }
+
+        public async Task SaveAsync(string parentDirectory)
+        {
+            var directory = Path.Combine(parentDirectory, Path.GetFileNameWithoutExtension(pdfFilePath));
+            var tasks = Pages.Select(page => page.SaveAsync(directory, "pdf")).ToList();
+            foreach(var task in tasks)
+            {
+                await task;
+            }
+        }
     }
 
 
     class WindwoViewModel : ViewModel
     {
         public ObservableCollection<BookViewModel> Books { get; } = new ObservableCollection<BookViewModel>();
-        
+
+        double _progress = 0;
+        public double Progress
+        {
+            get => _progress;
+            set
+            {
+                _progress = value;
+                RaisePropertyChanged();
+            }
+        }
+        string _spendTime = "not start";
+        public string SpendTime
+        {
+            get => _spendTime;
+            set
+            {
+                _spendTime = value;
+                RaisePropertyChanged();
+            }
+        }
+
+
+        public GeneralCommand SaveCommand { get; } = new GeneralCommand();
+
         readonly string directory;
 
         public WindwoViewModel(string directory = null)
         {
-            while(!Directory.Exists(directory))
-            {
-                var dialog = new CommonOpenFileDialog() { IsFolderPicker = true, };
-                if(dialog.ShowDialog() != CommonFileDialogResult.Ok)
-                {
-                    Application.Current.Shutdown();
-                    return;
-                }
-                directory = dialog.FileName;
-            }
+            directory = SystemUtility.PickDirectory(directory);
             this.directory = directory;
+
+            SaveCommand.OnExecuted += async () => directory = await SaveBooks();
         }
 
         public override async Task LoadResourceAsync()
         {
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+            var timer = new DispatcherTimer() { Interval = new TimeSpan(0, 0, 0, 0, 50), };
+            timer.Tick += (s, e) => SpendTime = stopwatch.Elapsed.ToString(@"hh\:mm\:ss\.fff");
+            timer.Start();
+
             var files = Directory.GetFiles(directory, "*.pdf", SearchOption.TopDirectoryOnly);
             var books = new List<ViewModel>();
             foreach (var file in files)
@@ -329,10 +367,26 @@ namespace ZycyCollecter.ViewModel
                 books.Add(book);
             }
 
-            foreach (var book in books)
+            for (int i = 0; i < books.Count; i++)
             {
+                var book = books[i];
                 await book.LoadResourceAsync();
+                Progress = (i + 1) / (double)books.Count;
             }
+
+            timer.Stop();
+            stopwatch.Stop();
+        }
+
+        public async Task<string> SaveBooks()
+        {
+            string directory = SystemUtility.PickDirectory();
+            foreach (var book in Books)
+            {
+                await book.SaveAsync(directory);
+            }
+
+            return directory;
         }
     }
 }

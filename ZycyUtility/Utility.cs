@@ -25,6 +25,8 @@ using System.Windows.Media.Imaging;
 using System.Runtime.InteropServices;
 using System.Drawing.Imaging;
 using PixelFormat = System.Drawing.Imaging.PixelFormat;
+using System.IO;
+using Microsoft.WindowsAPICodePack.Dialogs;
 
 namespace ZycyUtility
 {
@@ -65,7 +67,7 @@ namespace ZycyUtility
             {
                 intPtr = Marshal.AllocCoTaskMem(height * stride);
                 source.CopyPixels(new Int32Rect(0, 0, width, height), intPtr, height * stride, stride);
-                using var bitmap = new Bitmap(width, height, stride, PixelFormat.Format24bppRgb, intPtr);
+                using var bitmap = new Bitmap(width, height, stride, PixelFormat.Format32bppArgb, intPtr);
                 return new Bitmap(bitmap); // Coメモリ -> Managedメモリへ
             }
             finally
@@ -383,6 +385,26 @@ namespace ZycyUtility
             => throw new NotImplementedException();
     }
 
+    public static class SystemUtility
+    {
+
+        public static string PickDirectory(string defaultDirectory = null)
+        {
+            var directory = defaultDirectory;
+            while (!Directory.Exists(directory))
+            {
+                var dialog = new CommonOpenFileDialog() { IsFolderPicker = true, };
+                if (dialog.ShowDialog() != CommonFileDialogResult.Ok)
+                {
+                    Application.Current.Shutdown();
+                }
+                directory = dialog.FileName;
+            }
+
+            return directory;
+        }
+
+    }
 
     public class GeneralComparer<T> : IComparer<T>
     {
