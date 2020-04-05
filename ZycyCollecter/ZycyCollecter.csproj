@@ -4,15 +4,20 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
     <UseWPF>true</UseWPF>
+    <Platforms>AnyCPU;x64</Platforms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="iTextSharp" Version="5.5.13.1" />
-    <PackageReference Include="OpenCvSharp4" Version="4.2.0.20200208" />
+    <PackageReference Include="OpenCvSharp4" Version="4.3.0.20200404" />
     <PackageReference Include="Tesseract" Version="4.1.0-beta1" />
   </ItemGroup>
 
