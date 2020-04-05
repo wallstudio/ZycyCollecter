@@ -19,6 +19,7 @@ using System;
 using Brush = System.Windows.Media.Brush;
 using Brushes = System.Windows.Media.Brushes;
 using System.Collections;
+using System.Windows.Media.Imaging;
 
 namespace ZycyCollecter.ViewModel
 {
@@ -62,6 +63,7 @@ namespace ZycyCollecter.ViewModel
         public bool? IsRotate180 { get; private set; } = null;
 
         public GeneralCommand TestCommand { get; } = new GeneralCommand();
+        public GeneralCommand OpenDebugCommand { get; } = new GeneralCommand();
 
         readonly Image pageImageResource;
         Bitmap correctedPageBitmap;
@@ -72,7 +74,8 @@ namespace ZycyCollecter.ViewModel
             PageIndex = pageIndex;
             this.pageImageResource = pageImageResource;
             this.imageType = imageType;
-            TestCommand.OnExecuted += () => new ImageProcessingTest.MainWindow(pdf, pageIndex - 1).Show();
+            OpenDebugCommand.OnExecuted += () => new ImageProcessingTest.MainWindow(pdf, pageIndex - 1).Show();
+            TestCommand.OnExecuted += () => _ = Save(@"C:\Users\huser\Desktop", "pdf");
         }
 
         public override async Task LoadResourceAsync()
@@ -203,6 +206,13 @@ namespace ZycyCollecter.ViewModel
             }
         }
 
+        public async Task Save(string directory, string prefix)
+        {
+            var filename = $"{prefix}{PageIndex}.{imageType}";
+            var path = Path.Combine(directory, filename);
+            await (PageImage as BitmapSource).SaveAsync(path);
+        }
+
         // TODO: 編集用のコマンドと表示
     }
 
@@ -312,7 +322,7 @@ namespace ZycyCollecter.ViewModel
         {
             var files = Directory.GetFiles(directory, "*.pdf", SearchOption.TopDirectoryOnly);
             var books = new List<ViewModel>();
-            foreach (var file in files.Take(30))
+            foreach (var file in files)
             {
                 var book = new BookViewModel(file);
                 Books.Add(book);

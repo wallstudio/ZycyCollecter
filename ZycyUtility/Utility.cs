@@ -22,6 +22,9 @@ using System.Windows.Media;
 using System.Windows.Interop;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using System.Runtime.InteropServices;
+using System.Drawing.Imaging;
+using PixelFormat = System.Drawing.Imaging.PixelFormat;
 
 namespace ZycyUtility
 {
@@ -44,6 +47,32 @@ namespace ZycyUtility
         {
             return Imaging.CreateBitmapSourceFromHBitmap(source.GetHbitmap(),
                 IntPtr.Zero, Int32Rect.Empty, BitmapSizeOptions.FromEmptyOptions());
+        }
+
+        public static async Task SaveAsync(this BitmapSource source, string path)
+        {
+            var bitmap = source.ToBitmap();
+            await Task.Run(() => bitmap.Save(path));
+        }
+
+        public static Bitmap ToBitmap(this BitmapSource source)
+        {
+            int width = source.PixelWidth;
+            int height = source.PixelHeight;
+            int stride = width * ((source.Format.BitsPerPixel + 7) / 8);  // 行の長さは色深度によらず8の倍数のため
+            IntPtr intPtr = IntPtr.Zero;
+            try
+            {
+                intPtr = Marshal.AllocCoTaskMem(height * stride);
+                source.CopyPixels(new Int32Rect(0, 0, width, height), intPtr, height * stride, stride);
+                using var bitmap = new Bitmap(width, height, stride, PixelFormat.Format24bppRgb, intPtr);
+                return new Bitmap(bitmap); // Coメモリ -> Managedメモリへ
+            }
+            finally
+            {
+                if (intPtr != IntPtr.Zero)
+                    Marshal.FreeCoTaskMem(intPtr);
+            }
         }
     }
 

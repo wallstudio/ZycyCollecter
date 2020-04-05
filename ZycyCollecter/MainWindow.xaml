@@ -10,11 +10,20 @@
         d:DataContext="{d:DesignInstance mocks:WindowMock, IsDesignTimeCreatable=True}">
 
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+        <WrapPanel Orientation="Horizontal" Grid.Row="0">
+            <Button Margin="5" Command="{Binding OpenCommand}">Open</Button>
+            <Button Margin="5" Command="{Binding SaveCommand}">Save</Button>
+        </WrapPanel>
         <ListBox
-                ItemsSource="{Binding Books}"
-                ScrollViewer.VerticalScrollBarVisibility="Visible"
-                ScrollViewer.HorizontalScrollBarVisibility="Hidden"
-                ScrollViewer.CanContentScroll="False" >
+            Grid.Row="1"
+            ItemsSource="{Binding Books}"
+            ScrollViewer.VerticalScrollBarVisibility="Visible"
+            ScrollViewer.HorizontalScrollBarVisibility="Hidden"
+            ScrollViewer.CanContentScroll="False" >
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <local:BookItem />

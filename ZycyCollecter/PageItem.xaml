@@ -10,38 +10,21 @@
 
     <Border BorderBrush="Black" BorderThickness="1" Background="{Binding Background}">
         <Border.InputBindings>
-            <MouseBinding Command="{Binding TestCommand}" MouseAction="RightClick" />
+            <MouseBinding Command="{Binding OpenDebugCommand}" MouseAction="RightClick" />
         </Border.InputBindings>
         <StackPanel Margin="10">
             <Grid>
                 <Image Source="{Binding PageImage}" />
                 <TextBlock Text="{Binding PageIndex}" FontSize="30" />
             </Grid>
-            <Separator Height="10"></Separator>
-            <TextBlock Text="Lum" />
-            <StackPanel Orientation="Horizontal">
+            <Separator></Separator>
+            <WrapPanel Orientation="Horizontal">
                 <Button Command="{Binding TestCommand}">-2</Button>
                 <Button>-1</Button>
                 <Button>±0</Button>
                 <Button>+1</Button>
                 <Button>+2</Button>
-            </StackPanel>
-            <TextBlock Text="Lum" />
-            <StackPanel Orientation="Horizontal">
-                <Button>-2</Button>
-                <Button>-1</Button>
-                <Button>±0</Button>
-                <Button>+1</Button>
-                <Button>+2</Button>
-            </StackPanel>
-            <TextBlock Text="Lum" />
-            <StackPanel Orientation="Horizontal">
-                <Button>-2</Button>
-                <Button>-1</Button>
-                <Button>±0</Button>
-                <Button>+1</Button>
-                <Button>+2</Button>
-            </StackPanel>
+            </WrapPanel>
         </StackPanel>
     </Border>
 </UserControl>
