@@ -177,9 +177,9 @@ namespace ImageProcessingTest
                 var binary2 = RegistDest("binary2", blured.Threshold((_min + _max) / 2, 255, ThresholdTypes.Binary));
                 var sobel = RegistDest("sobel", binary2.Laplacian(MatType.CV_8U, ksize: 5));
                 var dilate = RegistDest("dilate", binary2.Dilate(new Mat(), iterations: 5));
-                var edgeRects = new[] { new Rect(0, 0, dilate.Width, 1), new Rect(0, 0, 1, dilate.Height), new Rect(0, dilate.Height - 1, dilate.Width, 1), new Rect(dilate.Width - 1, 0, 1, dilate.Height), };
                 
                 // 画像端にぶつかっている辺をケア
+                var edgeRects = new[] { new Rect(0, 0, dilate.Width, 1), new Rect(0, 0, 1, dilate.Height), new Rect(0, dilate.Height - 1, dilate.Width, 1), new Rect(dilate.Width - 1, 0, 1, dilate.Height), };
                 var touches = edgeRects.Where(rect =>
                 {
                     var edge = RegistDest($"Edge-{rect}", dilate.Clone(rect));
@@ -213,14 +213,31 @@ namespace ImageProcessingTest
 
                 // 単純組み合わせを列挙して交点を求めコーナーを検出
                 var linesCombi = GetCombination(fixedLines);
-                var crosses = GetCross(linesCombi);
+                var crosses = GetCross(linesCombi).Select(d => new Point2f((float)d.X, (float)d.Y)).ToArray();
                 log.AppendLine($"Crosses:\n    {string.Join("\n    ", crosses.Select(c => c.ToString()))}");
-                foreach ((double x, double y) in crosses)
+                foreach (var p in crosses)
                 {
-                    lined.Circle(new Point(x, y), 5, Scalar.Aqua);
+                    lined.Circle(new Point(p.X, p.Y), 5, Scalar.Aqua);
                 }
 
                 RegistDest("lined", lined);
+
+                // 透視変換
+                var srcRectSum = Sum(crosses, (c0, c1) => c0 + c1);
+                (double x, double y) = (srcRectSum.X / crosses.Length, srcRectSum.Y / crosses.Length);
+                var srcRectPoints = new Point2f[]
+                {
+                    crosses.First(c => c.X < x && c.Y < y) * (mat.Width / resize.Width),
+                    crosses.First(c => c.X > x && c.Y < y) * (mat.Width / resize.Width),
+                    crosses.First(c => c.X > x && c.Y > y) * (mat.Width / resize.Width),
+                    crosses.First(c => c.X < x && c.Y > y) * (mat.Width / resize.Width),
+                };
+                var dstRectPoints = new Point2f[]
+                    { new Point2f(0, 0), new Point2f(mat.Width, 0), new Point2f(mat.Width, mat.Height), new Point2f(0, mat.Height), };
+                var matrix = Cv2.GetPerspectiveTransform(srcRectPoints, dstRectPoints);
+                var parspective = mat.Clone();
+                Cv2.WarpPerspective(mat, parspective, matrix, parspective.Size());
+                RegistDest("parspective", parspective);
 
 
             });
@@ -285,9 +302,9 @@ namespace ImageProcessingTest
             return (x1, y1, x2, y2);
         }
 
-        static IEnumerable<(double x, double y)> GetCross(IEnumerable<((double x1, double y1, double x2, double y2), (double x1, double y1, double x2, double y2))> lines)
+        static IEnumerable<Point2d> GetCross(IEnumerable<((double x1, double y1, double x2, double y2), (double x1, double y1, double x2, double y2))> lines)
         {
-            var newBuffer = new List<(double, double)>();
+            var newBuffer = new List<Point2d>();
             foreach (var line in lines)
             {
                 (double x, double y) p1 = (line.Item1.x1, line.Item1.y1);
@@ -331,7 +348,7 @@ namespace ImageProcessingTest
                         continue; // やたら遠いものは平行とみなす
                     }
 
-                    newBuffer.Add((x, y));
+                    newBuffer.Add(new Point2d(x, y));
                 }
                 catch (ArithmeticException)
                 {
@@ -398,6 +415,16 @@ namespace ImageProcessingTest
             return newBuffer;
         }
 
+        static T Sum<T> (IEnumerable<T> source, Func<T, T, T> adder)
+        {
+            var sum = default(T);
+            foreach(var item in source)
+            {
+                sum = adder(sum, item);
+            }
+            return sum;
+        }
+        
         class GeneralComparer<T> : IComparer<T>
         {
             Func<T, T, int> comparerImplement;
