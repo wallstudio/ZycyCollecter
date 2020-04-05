@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,6 +24,7 @@ using Tesseract;
 using ZycyCollecter;
 using ZycyCollecter.Tesseract;
 using ZycyCollecter.ViewModel;
+using Point = OpenCvSharp.Point;
 using Rect = OpenCvSharp.Rect;
 using Window = System.Windows.Window;
 
@@ -158,11 +160,9 @@ namespace ImageProcessingTest
 
         async Task<Bitmap> DetectRect()
         {
+            StringBuilder log = new StringBuilder();
+
             Bitmap bitmap = await GetBitmap();
-            var minLengthRate = Slider0.Value;
-            var maxDistanceRate = Slider1.Value;
-            var threadtholdRate = Slider2.Value;
-            var binalizeThreadsholdRate = Slider3.Value;
             await Task.Run(() =>
             {
                 Mat mat = bitmap.ToMat();
@@ -176,15 +176,19 @@ namespace ImageProcessingTest
                 blured.MinMaxIdx(out var _min, out var _max);
                 var binary2 = RegistDest("binary2", blured.Threshold((_min + _max) / 2, 255, ThresholdTypes.Binary));
                 var sobel = RegistDest("sobel", binary2.Laplacian(MatType.CV_8U, ksize: 5));
-                var dilate = RegistDest("dilate", binary2.Dilate(new Mat(), iterations: 10));
+                var dilate = RegistDest("dilate", binary2.Dilate(new Mat(), iterations: 5));
                 var edgeRects = new[] { new Rect(0, 0, dilate.Width, 1), new Rect(0, 0, 1, dilate.Height), new Rect(0, dilate.Height - 1, dilate.Width, 1), new Rect(dilate.Width - 1, 0, 1, dilate.Height), };
-                var touchCount = edgeRects.Count(rect =>
+                
+                // 画像端にぶつかっている辺をケア
+                var touches = edgeRects.Where(rect =>
                 {
                     var edge = RegistDest($"Edge-{rect}", dilate.Clone(rect));
                     edge.MinMaxIdx(out var min, out var max);
                     return min != max;
-                });
-                var linesSet = SearchHouhLines(sobel, touchCount);
+                }).ToArray();
+                log.AppendLine($"touch: {touches.Length}");
+
+                var linesSet = SearchHouhLines(sobel, touches.Length);
 
                 // 重複と斜めを消して評価
                 var filted = linesSet
@@ -192,21 +196,53 @@ namespace ImageProcessingTest
                     {
                         var unique = DistinctSimmiler(ls, sobel.Width / 3, 20);
                         return IgnoreDiagonally(unique, 10);
-                    })
-                    .ToArray();
-                var lines = filted
-                    .FirstOrDefault(ls => ls.Count >= 4 - touchCount);
-                lines ??= filted.OrderBy(ls => ls.Count).FirstOrDefault(ls => ls.Count > 4 - touchCount);
+                    }).ToArray();
+                var lines = filted.FirstOrDefault(ls => ls.Count >= 4 - touches.Length);
+                log.AppendLine($"HeigScoreLines: {lines?.Count}");
+                lines ??= filted.OrderBy(ls => ls.Count).FirstOrDefault(ls => ls.Count > 4 - touches.Length);
+                log.AppendLine($"CountMatchLines: {lines?.Count}");
                 lines ??= filted.First();
-
+                log.AppendLine($"FallbackAnyLines: {lines?.Count}");
+                var fixedLines = lines.Select(To2Point).Concat(touches.Select(r => ((double)r.Left, (double)r.Top, (double)r.Right, (double)r.Bottom)));
+                log.AppendLine($"FixedLines:\n     {string.Join("\n    ", fixedLines.Select(ls => ls.ToString()))}");
                 var lined = resize.CvtColor(ColorConversionCodes.RGBA2RGB);
-                foreach (var (x1, y1, x2, y2) in lines.Select(To2Point))
+                foreach ((double x1, double y1, double x2, double y2) in fixedLines)
                 {
-                    lined.Line(x1, y1, x2, y2, Scalar.Green);
+                    lined.Line((int)x1, (int)y1, (int)x2, (int)y2, Scalar.Green);
                 }
+
+                // 単純組み合わせを列挙して交点を求めコーナーを検出
+                var linesCombi = GetCombination(fixedLines);
+                var crosses = GetCross(linesCombi);
+                log.AppendLine($"Crosses:\n    {string.Join("\n    ", crosses.Select(c => c.ToString()))}");
+                foreach ((double x, double y) in crosses)
+                {
+                    lined.Circle(new Point(x, y), 5, Scalar.Aqua);
+                }
+
                 RegistDest("lined", lined);
+
+
             });
+
+            displayText.Text = log.ToString();
             return null;
+        }
+
+        static IEnumerable<(T, T)> GetCombination<T>(IEnumerable<T> source)
+        {
+            var buf = new LinkedList<T>(source);
+            var dst = new List<(T, T)>();
+            while(buf.Count > 0)
+            {
+                var a = buf.First();
+                buf.Remove(a);
+                foreach (var b in buf)
+                {
+                    dst.Add((a, b));
+                }
+            }
+            return dst;
         }
 
         static IEnumerable<IList<LineSegmentPolar>> SearchHouhLines(Mat src, int touchCount)
@@ -236,17 +272,73 @@ namespace ImageProcessingTest
             return linesSet.OrderBy(ls => ls.Count);
         }
 
-        static (int x1, int y1, int x2, int y2) To2Point(LineSegmentPolar line)
+        static (double x1, double y1, double x2, double y2) To2Point(LineSegmentPolar line)
         {
             var a = Math.Cos(line.Theta);
             var b = Math.Sin(line.Theta);
             var x0 = a * line.Rho;
             var y0 = b * line.Rho;
-            var x1 = (int)(x0 + 1000 * (-b));
-            var y1 = (int)(y0 + 1000 * (a));
-            var x2 = (int)(x0 - 1000 * (-b));
-            var y2 = (int)(y0 - 1000 * (a));
+            var x1 = x0 + 1000 * (-b);
+            var y1 = y0 + 1000 * (a);
+            var x2 = x0 - 1000 * (-b);
+            var y2 = y0 - 1000 * (a);
             return (x1, y1, x2, y2);
+        }
+
+        static IEnumerable<(double x, double y)> GetCross(IEnumerable<((double x1, double y1, double x2, double y2), (double x1, double y1, double x2, double y2))> lines)
+        {
+            var newBuffer = new List<(double, double)>();
+            foreach (var line in lines)
+            {
+                (double x, double y) p1 = (line.Item1.x1, line.Item1.y1);
+                (double x, double y) p2 = (line.Item1.x2, line.Item1.y2);
+                (double x, double y) q1 = (line.Item2.x1, line.Item2.y1);
+                (double x, double y) q2 = (line.Item2.x2, line.Item2.y2);
+                try
+                {
+                    if(p1 == p2 || q1 == q2)
+                    {
+                        Debug.WriteLine($"重複点 {line.Item1} {line.Item2}");
+                        continue;
+                    }
+
+                    // 傾き
+                    var kp = (p2.x - p1.x) == 0
+                        ? int.MaxValue
+                        : (p2.y - p1.y) / (p2.x - p1.x);
+                    var kq = (q2.x - q1.x) == 0
+                        ? int.MaxValue
+                        : (q2.y - q1.y) / (q2.x - q1.x);
+                    if(kp == kq)
+                    {
+                        continue; // 平行
+                    }
+
+                    // yオフセット
+                    var cp = kp * (0 - p1.x) + p1.y;
+                    var cq = kq * (0 - q1.x) + q1.y;
+
+                    // 交点
+                    //     0 = kp * (x - 0) - (y - cp)
+                    //  -) 0 = kq * (x - 0) - (y - cq)
+                    // -------------------------
+                    //  0 = (kp - kq) * x + (cp - cq)
+                    var x = -(cp - cq) / (kp - kq);
+                    var y = kp * (x - 0) + cp;
+
+                    if(Math.Abs(x) > 10000 || Math.Abs(y) > 10000)
+                    {
+                        continue; // やたら遠いものは平行とみなす
+                    }
+
+                    newBuffer.Add((x, y));
+                }
+                catch (ArithmeticException)
+                {
+                    continue;
+                }
+            }
+            return newBuffer;
         }
 
         async Task<ImageSource> GetSampleImage()

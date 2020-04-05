@@ -8,39 +8,49 @@
         Title="MainWindow" Height="450" Width="800">
     <Grid>
         <Image x:Name="displayImage" />
-        <ListBox x:Name="logImage" HorizontalAlignment="Left" Width="153">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <Image Source="{Binding}" Height="100" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
-        <TextBlock x:Name="displayText" IsHitTestVisible="False" Text="displayText..." />
-        <StackPanel HorizontalAlignment="Right" Width="193">
-            <ComboBox x:Name="imageType" />
-            <Button x:Name="reflesh">REFLESH</Button>
-            <TextBlock x:Name="SliderLabel0" Text="0" TextAlignment="Center" />
-            <Slider x:Name="Slider0" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel1" Text="1" TextAlignment="Center" />
-            <Slider x:Name="Slider1" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel2" Text="2" TextAlignment="Center" />
-            <Slider x:Name="Slider2" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel3" Text="3" TextAlignment="Center" />
-            <Slider x:Name="Slider3" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel4" Text="4" TextAlignment="Center" />
-            <Slider x:Name="Slider4" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel5" Text="5" TextAlignment="Center" />
-            <Slider x:Name="Slider5" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel6" Text="6" TextAlignment="Center" />
-            <Slider x:Name="Slider6" Minimum="0" Maximum="1" />
-            <TextBlock x:Name="SliderLabel7" Text="7" TextAlignment="Center" />
-            <Slider x:Name="Slider7" Minimum="0" Maximum="1" />
-        </StackPanel>
-        <StackPanel Height="37" VerticalAlignment="Bottom">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="120" />
+                <ColumnDefinition Width="2*"/>
+                <ColumnDefinition Width="1*" />
+            </Grid.ColumnDefinitions>
+
+            <ListBox x:Name="logImage" Grid.Column="0">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Image Source="{Binding}" Height="100" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock x:Name="displayText" IsHitTestVisible="False" 
+                Text="displayText..."  Grid.Column="1" Foreground="Magenta" />
+            <StackPanel  Grid.Column="2" >
+                <ComboBox x:Name="imageType" />
+                <Button x:Name="reflesh">REFLESH</Button>
+                <TextBlock x:Name="SliderLabel0" Text="0" TextAlignment="Center" />
+                <Slider x:Name="Slider0" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel1" Text="1" TextAlignment="Center" />
+                <Slider x:Name="Slider1" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel2" Text="2" TextAlignment="Center" />
+                <Slider x:Name="Slider2" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel3" Text="3" TextAlignment="Center" />
+                <Slider x:Name="Slider3" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel4" Text="4" TextAlignment="Center" />
+                <Slider x:Name="Slider4" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel5" Text="5" TextAlignment="Center" />
+                <Slider x:Name="Slider5" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel6" Text="6" TextAlignment="Center" />
+                <Slider x:Name="Slider6" Minimum="0" Maximum="1" />
+                <TextBlock x:Name="SliderLabel7" Text="7" TextAlignment="Center" />
+                <Slider x:Name="Slider7" Minimum="0" Maximum="1" />
+            </StackPanel>
+        </Grid>
+        <StackPanel Height="56" VerticalAlignment="Bottom">
             <TextBlock Text="{Binding Value, ElementName=pageIndex}" />
             <Slider 
                 x:Name="pageIndex" Maximum="1" TickPlacement="BottomRight" IsSnapToTickEnabled="True"
                 Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType=StackPanel}}" />
         </StackPanel>
+
     </Grid>
 </Window>
