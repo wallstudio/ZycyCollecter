@@ -77,28 +77,38 @@ namespace ZycyCollecter.ViewModel
 
         public override async Task LoadResourceAsync()
         {
-            IsRotate180 = await Task.Run(() => CheckIsRotate180(pageImageResource));
+            if (correctedPageBitmap == null)
+            {
+                await Task.Run(() => PreparThreadSafe());
+            }
+            PageImage = correctedPageBitmap.ToImageSource();
+            Debug.WriteLine($"[{GetHashCode().ToString("X4")}] {PageIndex} {PageImage.Width}x{PageImage.Height}");
+        }
+
+        public void PreparThreadSafe()
+        {
+            if(correctedPageBitmap != null)
+            {
+                return;
+            }
+            IsRotate180 = CheckIsRotate180(pageImageResource);
             Background = IsRotate180 is null ? Brushes.Gray : Brushes.White;
-            if(IsRotate180 == true)
+            if (IsRotate180 == true)
             {
                 pageImageResource.RotateFlip(RotateFlipType.Rotate180FlipNone);
             }
 
             try
             {
-                var corners = await Task.Run(() => DetectCorners(pageImageResource));
-                var trimed = await Task.Run(() => TrimAndTranform(pageImageResource, corners));
+                var corners = DetectCorners(pageImageResource);
+                var trimed = TrimAndTranform(pageImageResource, corners);
                 correctedPageBitmap = trimed;
             }
-            catch(Exception e)
+            catch (Exception e)
             {
-                correctedPageBitmap = await Task.Run(() => new Bitmap(pageImageResource));
                 Debug.WriteLine(e);
+                correctedPageBitmap = new Bitmap(pageImageResource);
             }
-
-            PageImage = correctedPageBitmap.ToImageSource();
-
-            Debug.WriteLine($"[{GetHashCode().ToString("X4")}] {PageIndex} {PageImage.Width}x{PageImage.Height}");
         }
 
         Point2f[] DetectCorners(Image imageResouce)
@@ -215,6 +225,7 @@ namespace ZycyCollecter.ViewModel
         public ObservableCollection<PageViewModel> Pages { get; } = new ObservableCollection<PageViewModel>();
 
         readonly string pdfFilePath;
+        bool isOddOrientation;
 
         public BookViewModel(string pdfFilePath)
         {
@@ -228,7 +239,7 @@ namespace ZycyCollecter.ViewModel
             var images = imageEnumrable.ToArray();
             var pageImage = await images.FirstOrDefault().image?.ToImageSourceAsync();
 
-            var pages = new List<ViewModel>();
+            var pages = new List<PageViewModel>();
             for (int i = 0; i < images.Length; i++)
             {
                 var (image, type) = images[i];
@@ -237,16 +248,26 @@ namespace ZycyCollecter.ViewModel
                 pages.Add(pageVM);
             }
 
-            var groupedPages = pages.GroupByCount(5);
-            foreach(var group in groupedPages)
+            var dispatcher = Application.Current.Dispatcher;
+            await Task.Run(() =>
             {
-                var tasks = group.Select(e => e.LoadResourceAsync());
-                foreach (var task in tasks)
-                {
-                    await task;
-                }
-            }
+                Parallel.ForEach(
+                    source: pages,
+                    parallelOptions: new ParallelOptions() { },
+                    body: page =>
+                    {
+                        page.PreparThreadSafe();
+                        dispatcher.Invoke(page.LoadResourceAsync);
+                    });
+            });
 
+            CollectOrientation();
+
+            Debug.WriteLine($"{Path.GetFileName(pdfFilePath)}（{PageCount}）が{(isOddOrientation ? "Odd" : "Even")}で終了");
+        }
+
+        void CollectOrientation()
+        {
             var rotations = Pages.Select(p => p.IsRotate180);
             var rotationsWithoutCover = rotations.Skip(1).SkipLast(1).ToArray();
             var oddPattern = Enumerable.Range(0, rotationsWithoutCover.Count()).Select(i => i % 2 == 1);
@@ -261,7 +282,7 @@ namespace ZycyCollecter.ViewModel
                 _ = page.Rotate180(orientation);
             }
 
-            Debug.WriteLine($"{Path.GetFileName(pdfFilePath)}（{PageCount}）が{(isOddOrientation ? "Odd" : "Even")}で終了");
+            this.isOddOrientation = isOddOrientation;
         }
     }
 
