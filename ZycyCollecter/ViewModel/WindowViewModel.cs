@@ -236,9 +236,14 @@ namespace ZycyCollecter.ViewModel
                 pages.Add(pageVM);
             }
 
-            foreach(var page in pages)
+            var groupedPages = pages.GroupByCount(5);
+            foreach(var group in groupedPages)
             {
-                await page.LoadResourceAsync();
+                var tasks = group.Select(e => e.LoadResourceAsync());
+                foreach (var task in tasks)
+                {
+                    await task;
+                }
             }
         }
     }
