@@ -305,7 +305,7 @@ namespace ZycyCollecter.Utility
             }
             else
             {
-                return (string.Empty, 0);
+                return (string.Empty, -1);
             }
         }
     

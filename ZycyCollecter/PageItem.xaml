@@ -8,7 +8,7 @@
              mc:Ignorable="d" Width="150"
              d:DataContext="{d:DesignInstance mocks:PageMock, IsDesignTimeCreatable=True}">
 
-    <Border BorderBrush="Black" BorderThickness="1">
+    <Border BorderBrush="Black" BorderThickness="1" Background="{Binding Background}">
         <StackPanel Margin="10">
             <Grid>
                 <Image Source="{Binding PageImage}" />

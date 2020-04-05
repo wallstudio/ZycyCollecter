@@ -16,6 +16,8 @@ using OpenCvSharp;
 using OpenCvSharp.Extensions;
 using System.Text;
 using System;
+using Brush = System.Windows.Media.Brush;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace ZycyCollecter.ViewModel
 {
@@ -33,7 +35,7 @@ namespace ZycyCollecter.ViewModel
     {
 
         public int PageIndex { get; } = -1;
-        
+
         ImageSource _pageImage = WPFUtility.fallBackImage;
         public ImageSource PageImage
         {
@@ -45,9 +47,23 @@ namespace ZycyCollecter.ViewModel
             }
         }
 
+        Brush _background = Brushes.White;
+        public Brush Background
+        {
+            get => _background;
+            set
+            {
+                _background = value;
+                RaisePropertyChanged();
+            }
+        }
+
+        public bool? IsRotate180 { get; private set; }
+
         public GeneralCommand TestCommand { get; } = new GeneralCommand();
 
         readonly Image pageImageResource;
+        Bitmap correctedPageBitmap;
         readonly string imageType;
 
         public PageViewModel(int pageIndex, Image pageImageResource, string imageType)
@@ -55,26 +71,32 @@ namespace ZycyCollecter.ViewModel
             PageIndex = pageIndex;
             this.pageImageResource = pageImageResource;
             this.imageType = imageType;
-            TestCommand.OnExecuted += async () => RaisePropertyChanged(nameof(PageImage));
+            TestCommand.OnExecuted += () => _ = Rotate180(true);
         }
 
         public override async Task LoadResourceAsync()
         {
-            if(await Task.Run(() => IsRotate180(pageImageResource)))
+            IsRotate180 = await Task.Run(() => CheckIsRotate180(pageImageResource));
+            Background = IsRotate180 is null ? Brushes.Gray : Brushes.White;
+            if(IsRotate180 == true)
             {
                 pageImageResource.RotateFlip(RotateFlipType.Rotate180FlipNone);
             }
+
             try
             {
                 var corners = await Task.Run(() => DetectCorners(pageImageResource));
                 var trimed = await Task.Run(() => TrimAndTranform(pageImageResource, corners));
-                PageImage = trimed.ToImageSource();
+                correctedPageBitmap = trimed;
             }
             catch(Exception e)
             {
-                PageImage = await pageImageResource.ToImageSourceAsync();
+                correctedPageBitmap = await Task.Run(() => new Bitmap(pageImageResource));
                 Debug.WriteLine(e);
             }
+
+            PageImage = correctedPageBitmap.ToImageSource();
+
             Debug.WriteLine($"[{GetHashCode().ToString("X4")}] {PageIndex} {PageImage.Width}x{PageImage.Height}");
         }
 
@@ -138,7 +160,7 @@ namespace ZycyCollecter.ViewModel
             return trimed.ToBitmap();
         }
 
-        bool IsRotate180(Image imageResouce)
+        bool? CheckIsRotate180(Image imageResouce)
         {
             var log = new StringBuilder();
             var bitmap = new Bitmap(imageResouce);
@@ -148,7 +170,26 @@ namespace ZycyCollecter.ViewModel
             bitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
             var (_, rotate180Confidience) = bitmap.ParseText();
 
+            if(rawConfidience < 0.5 && rotate180Confidience < 0.5)
+            {
+                return null; // 認識失敗
+            }
+
             return rawConfidience < rotate180Confidience;
+        }
+
+        public async Task Rotate180(bool isRotate180)
+        {
+            while (correctedPageBitmap == null)
+            {
+                await Task.Delay(1000);
+            }
+
+            if (isRotate180)
+            {
+                correctedPageBitmap.RotateFlip(RotateFlipType.Rotate180FlipNone);
+                PageImage = correctedPageBitmap.ToImageSource();
+            }
         }
 
         // TODO: 編集用のコマンドと表示
