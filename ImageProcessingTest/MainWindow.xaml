@@ -5,9 +5,9 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ImageProcessingTest"
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        <Image x:Name="displayImage" />
+        Title="MainWindow" Height="720" Width="1280">
+    <Grid Background="LightGray">
+        <Image x:Name="displayImage" Margin="10" />
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="120" />

@@ -10,6 +10,7 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -75,7 +76,7 @@ namespace ImageProcessingTest
             }
             dests.Clear();
 
-            var bitmap = await DetectRect(); // destsに詰める
+            var bitmap = await ORCTraverser(); // destsに詰める
 
             imageType.Items.Clear();
             foreach (var k in dests.Keys.Reverse())
@@ -138,6 +139,147 @@ namespace ImageProcessingTest
             }
 
             return await GetBitmap();
+        }
+
+        async Task<Bitmap> ORCTraverser()
+        {
+            StringBuilder log = new StringBuilder();
+            Bitmap bitmap = await GetBitmap();
+
+            await Task.Run(() =>
+            {
+                Mat mat = bitmap.ToMat();
+                RegistDest($"origin", mat);
+
+                // OCR
+                //var ocrResize = mat.Resize(new OpenCvSharp.Size(1024, 1024f / mat.Width * mat.Height));
+                var ocrGray = RegistDest("ocrGray", mat.CvtColor(ColorConversionCodes.RGBA2GRAY));
+                var ocrBinary = RegistDest("ocrBinary", ocrGray.Threshold(0, 255, ThresholdTypes.Otsu));
+                var orientations = new[] { ocrBinary, ocrBinary.Flip(FlipMode.XY), };
+                var traineddata = @"C:\Users\huser\Desktop\book\ZycyCollecter\ZycyCollecter\tessdata";
+                var pages = new List<GenericInfoContainer>();
+                for (int i = 0; i < orientations.Length; i++)
+                {
+                    var orientation = orientations[i];
+                    using var tesseranct = new TesseractEngine(traineddata, "jpn_vert+jpn");
+                    using var page = tesseranct.Process(PixConverter.ToPix(orientation.ToBitmap()));
+                    orientation = orientation.CvtColor(ColorConversionCodes.RGBA2RGB);
+
+                    var page_ = new GenericInfoContainer();
+                    pages.Add(page_);
+                    page_["text"] = page.GetText();
+                    page_["Confidience"] = page.GetMeanConfidence();
+                    page_["Matrix"] = orientation.Clone();
+                    page_["RectMatrix"] = orientation.Clone();
+
+                    using (var iterator = page.GetIterator())
+                    {
+                        GenericInfoContainer block = null, para = null, line = null, word = null, symbol = null;
+                        do
+                        {
+                            do
+                            {
+                                do
+                                {
+                                    do
+                                    {
+                                        if (iterator.IsAtBeginningOf(PageIteratorLevel.Block))
+                                        {
+                                            // do whatever you need to do when a block (top most level result) is encountered.
+                                            block = new GenericInfoContainer();
+                                            page_?.Add(block);
+                                            block["text"] = iterator.GetText(PageIteratorLevel.Block);
+                                            block["Confidence"] = iterator.GetConfidence(PageIteratorLevel.Block);
+                                            if (iterator.TryGetBoundingBox(PageIteratorLevel.Block, out var bounds))
+                                            {
+                                                // do whatever you want with bounding box for the symbol
+                                                var rect = new Rect(bounds.X1, bounds.Y1, bounds.Width, bounds.Height);
+                                                (page_["RectMatrix"] as Mat).Rectangle(rect, Scalar.Red, thickness: 50);
+                                            }
+                                        }
+                                        if (iterator.IsAtBeginningOf(PageIteratorLevel.Para))
+                                        {
+                                            // do whatever you need to do when a paragraph is encountered.
+                                            para = new GenericInfoContainer();
+                                            block?.Add(para);
+                                            para["text"] = iterator.GetText(PageIteratorLevel.Para);
+                                            para["Confidence"] = iterator.GetConfidence(PageIteratorLevel.Para);
+                                            if (iterator.TryGetBoundingBox(PageIteratorLevel.Para, out var bounds))
+                                            {
+                                                // do whatever you want with bounding box for the symbol
+                                                var rect = new Rect(bounds.X1, bounds.Y1, bounds.Width, bounds.Height);
+                                                (page_["RectMatrix"] as Mat).Rectangle(rect, Scalar.Green, thickness: 50);
+                                            }
+                                        }
+                                        if (iterator.IsAtBeginningOf(PageIteratorLevel.TextLine))
+                                        {
+                                            // do whatever you need to do when a line of text is encountered is encountered.
+                                            line = new GenericInfoContainer();
+                                            para?.Add(line);
+                                            line["text"] = iterator.GetText(PageIteratorLevel.TextLine);
+                                            line["Confidence"] = iterator.GetConfidence(PageIteratorLevel.TextLine);
+                                            if (iterator.TryGetBoundingBox(PageIteratorLevel.TextLine, out var bounds))
+                                            {
+                                                // do whatever you want with bounding box for the symbol
+                                                var rect = new Rect(bounds.X1, bounds.Y1, bounds.Width, bounds.Height);
+                                                (page_["RectMatrix"] as Mat).Rectangle(rect, Scalar.Yellow, thickness: 50);
+                                            }
+                                        }
+                                        if (iterator.IsAtBeginningOf(PageIteratorLevel.Word))
+                                        {
+                                            // do whatever you need to do when a word is encountered is encountered.
+                                            word = new GenericInfoContainer();
+                                            line?.Add(word);
+                                            word["text"] = iterator.GetText(PageIteratorLevel.Word);
+                                            word["Confidence"] = iterator.GetConfidence(PageIteratorLevel.Word);
+                                            if (iterator.TryGetBoundingBox(PageIteratorLevel.Word, out var bounds))
+                                            {
+                                                // do whatever you want with bounding box for the symbol
+                                                var rect = new Rect(bounds.X1, bounds.Y1, bounds.Width, bounds.Height);
+                                                (page_["RectMatrix"] as Mat).Rectangle(rect, Scalar.Green, thickness: 50);
+                                            }
+                                        }
+
+                                        {
+                                            symbol = new GenericInfoContainer();
+                                            word?.Add(symbol);
+                                            symbol["text"] = iterator.GetText(PageIteratorLevel.Symbol);
+                                            symbol["Confidence"] = iterator.GetConfidence(PageIteratorLevel.Symbol);
+                                            if (iterator.TryGetBoundingBox(PageIteratorLevel.Symbol, out var bounds))
+                                            {
+                                                // do whatever you want with bounding box for the symbol
+                                                var rect = new Rect(bounds.X1, bounds.Y1, bounds.Width, bounds.Height);
+                                                (page_["RectMatrix"] as Mat).Rectangle(rect, Scalar.Pink, thickness: 50);
+                                            }
+                                        }
+
+                                    }
+                                    while (iterator.Next(PageIteratorLevel.Word, PageIteratorLevel.Symbol));
+                                }
+                                while (iterator.Next(PageIteratorLevel.TextLine, PageIteratorLevel.Word));
+                            }
+                            while (iterator.Next(PageIteratorLevel.Para, PageIteratorLevel.TextLine));
+                        }
+                        while (iterator.Next(PageIteratorLevel.Block, PageIteratorLevel.Para));
+                    }
+                    var text = page.GetText().Split('\n').Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s));
+                    RegistDest($"orientation-{i}", page_["RectMatrix"] as Mat);
+                    log.AppendLine($"Orientation-{i}:\n    {string.Join("\n    ", text)}");
+                    log.AppendLine($"Confidience: {page.GetMeanConfidence()}");
+                }
+
+                var confidier = pages
+                    .Where(p => new Regex(@"[^\s\n\r]").IsMatch(p["text"] as string))
+                    .OrderByDescending(c => c["Confidience"])
+                    .FirstOrDefault() as GenericInfoContainer;
+                var result = (float)(confidier?["Confidience"] ?? 0f) > 0.5 ? confidier : null;
+                var resultImage = (result?["Matrix"] as Mat);
+                RegistDest($"result", resultImage ?? ~ocrGray);
+                log.AppendLine($"Result: {result?["Confidience"]}");
+            });
+
+            displayText.Text = log.ToString();
+            return null;
         }
 
         async Task<Bitmap> CVBasic()
@@ -238,8 +380,6 @@ namespace ImageProcessingTest
                 var parspective = mat.Clone();
                 Cv2.WarpPerspective(mat, parspective, matrix, parspective.Size());
                 RegistDest("parspective", parspective);
-
-
             });
 
             displayText.Text = log.ToString();
@@ -425,6 +565,26 @@ namespace ImageProcessingTest
             return sum;
         }
         
+        class GenericInfoContainer : List<GenericInfoContainer>
+        {
+            Dictionary<string, object> map = new Dictionary<string, object>();
+            public object this[string key]
+            {
+                get => map[key];
+                set => map[key] = value;
+            }
+
+            public override string ToString()
+            {
+                var sb = new StringBuilder($"Children:{Count}; ");
+                foreach (var kv in map)
+                {
+                    sb.Append($"{kv.Key}=>{kv.Value}; ");
+                }
+                return sb.ToString();
+            }
+        }
+
         class GeneralComparer<T> : IComparer<T>
         {
             Func<T, T, int> comparerImplement;

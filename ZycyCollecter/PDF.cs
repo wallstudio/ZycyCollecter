@@ -27,7 +27,7 @@ namespace ZycyCollecter
             {
                 var parser = new PdfReaderContentParser(reader);
                 var renderListener = new ImageRenderListener();
-                for (int i = 1; i < reader.NumberOfPages; i++)
+                for (int i = 1; i <= reader.NumberOfPages; i++)
                 {
                     parser.ProcessContent(i, renderListener);
                 }
