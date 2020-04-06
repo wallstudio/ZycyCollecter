@@ -239,6 +239,8 @@ namespace ZycyCollecter.ViewModel
 
         public ObservableCollection<PageViewModel> Pages { get; } = new ObservableCollection<PageViewModel>();
 
+        public GeneralCommand SaveCommand { get; } = new GeneralCommand();
+
         readonly string pdfFilePath;
         bool isOddOrientation;
 
@@ -246,13 +248,14 @@ namespace ZycyCollecter.ViewModel
         {
             this.pdfFilePath = pdfFilePath;
             Pages.CollectionChanged += (s, e) => RaisePropertyChanged(nameof(PageCount));
+            SaveCommand.OnExecuted += () => _ = SaveAsync();
         }
 
         public override async Task LoadResourceAsync()
         {
             var imageEnumrable = await Task.Run(() => PDFUtility.GetImages(pdfFilePath));
             var images = imageEnumrable.ToArray();
-            var pageImage = await images.FirstOrDefault().image?.ToImageSourceAsync();
+            CoverImage = await images.FirstOrDefault().image?.ToImageSourceAsync();
 
             var pages = new List<PageViewModel>();
             for (int i = 0; i < images.Length; i++)
@@ -300,8 +303,9 @@ namespace ZycyCollecter.ViewModel
             this.isOddOrientation = isOddOrientation;
         }
 
-        public async Task SaveAsync(string parentDirectory)
+        public async Task SaveAsync(string parentDirectory = null)
         {
+            parentDirectory = SystemUtility.PickDirectory(parentDirectory);
             var directory = Path.Combine(parentDirectory, Path.GetFileNameWithoutExtension(pdfFilePath));
             var tasks = Pages.Select(page => page.SaveAsync(directory, "pdf")).ToList();
             foreach(var task in tasks)
@@ -340,14 +344,20 @@ namespace ZycyCollecter.ViewModel
 
         public GeneralCommand SaveCommand { get; } = new GeneralCommand();
 
-        readonly string directory;
+        readonly string[] files;
 
-        public WindwoViewModel(string directory = null)
+        public WindwoViewModel()
+        {
+            files = SystemUtility.PickFiles();
+
+            SaveCommand.OnExecuted += async () => _ = await SaveBooks();
+        }
+        public WindwoViewModel(string directory)
         {
             directory = SystemUtility.PickDirectory(directory);
-            this.directory = directory;
+            files = Directory.GetFiles(directory, "*.pdf", SearchOption.TopDirectoryOnly);
 
-            SaveCommand.OnExecuted += async () => directory = await SaveBooks();
+            SaveCommand.OnExecuted += async () => _ = await SaveBooks();
         }
 
         public override async Task LoadResourceAsync()
@@ -358,7 +368,6 @@ namespace ZycyCollecter.ViewModel
             timer.Tick += (s, e) => SpendTime = stopwatch.Elapsed.ToString(@"hh\:mm\:ss\.fff");
             timer.Start();
 
-            var files = Directory.GetFiles(directory, "*.pdf", SearchOption.TopDirectoryOnly);
             var books = new List<ViewModel>();
             foreach (var file in files)
             {

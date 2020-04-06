@@ -33,7 +33,8 @@ namespace ZycyCollecter
             Loaded += (s, e) =>
             {
                 const string directory = @"C:\Users\huser\Desktop\book";
-                var viewModel = new WindwoViewModel(directory);
+                //var viewModel = new WindwoViewModel(directory);
+                var viewModel = new WindwoViewModel();
                 DataContext = viewModel;
 
                 _ = viewModel.LoadResourceAsync();

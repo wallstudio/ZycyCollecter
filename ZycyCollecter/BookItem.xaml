@@ -16,8 +16,9 @@
             </Grid.ColumnDefinitions>
             <WrapPanel Grid.Column="0" Background="LightGray">
                 <StackPanel Margin="5">
-                    <Image Width="100" Height="100" />
+                    <Image Source="{Binding CoverImage}" Width="100" Height="100" />
                     <TextBlock Text="{Binding PageCount}" />
+                    <Button Command="{Binding SaveCommand}">Save</Button>
                 </StackPanel>
             </WrapPanel>
             <ListBox

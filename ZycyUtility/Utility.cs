@@ -404,6 +404,22 @@ namespace ZycyUtility
             return directory;
         }
 
+        public static string[] PickFiles(string defaultDirectory = null)
+        {
+            var files = new string[0];
+            while (files?.Length == 0)
+            {
+                var dialog = new CommonOpenFileDialog() { Multiselect = true };
+                if (dialog.ShowDialog() != CommonFileDialogResult.Ok)
+                {
+                    Application.Current.Shutdown();
+                }
+                files = dialog.FileNames.ToArray();
+            }
+
+            return files;
+        }
+
     }
 
     public class GeneralComparer<T> : IComparer<T>
