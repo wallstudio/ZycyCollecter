@@ -7,7 +7,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZycyCollecter", "ZycyCollec
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ImageProcessingTest", "ImageProcessingTest\ImageProcessingTest.csproj", "{AA9D430A-1E85-4235-A92F-B5D152D4EB22}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZycyUtility", "ZycyUtility\ZycyUtility.csproj", "{19BFE603-BC62-40AE-8719-B058D0D13D34}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZycyUtility", "ZycyUtility\ZycyUtility.csproj", "{19BFE603-BC62-40AE-8719-B058D0D13D34}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3BB09E8D-D43A-47A2-8C2E-A3613B296188}"
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
